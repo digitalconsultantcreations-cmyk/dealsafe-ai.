@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DealSafe AI — Know What You're Signing Before You Sign It</title>
+<meta name="description" content="Paste a contract, get a plain-English redline of what's risky and what to say instead." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0b0e13;
+    --ink-2:#12161d;
+    --paper:#ece6d8;
+    --paper-dim:#dfd8c6;
+    --rule:#c9bfa8;
+    --wax:#9c6b2e;
+    --wax-bright:#c98a3d;
+    --redline:#a3352f;
+    --okink:#2f6b52;
+    --caution:#8a6a1f;
+    --muted:#8b96a3;
+    --text-on-ink:#e7e2d6;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 500px at 50% -10%, rgba(156,107,46,.08), transparent 60%),
+      var(--ink);
+    color:var(--text-on-ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:700px; margin:0 auto; padding:56px 20px 90px;}
+
+  /* --- Header --- */
+  .mark{
+    font-family:'JetBrains Mono',monospace; font-size:.78rem;
+    color:var(--wax-bright); letter-spacing:.03em; margin-bottom:22px;
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:600; font-style:normal;
+    font-size:2.15rem; line-height:1.2; margin:0 0 16px; color:#f4f1e8;
+    max-width:14ch;
+  }
+  .lede{
+    color:var(--muted); font-size:1.05rem; max-width:52ch; margin:0 0 40px;
+  }
+
+  /* --- The document surface --- */
+  .doc{
+    background:var(--paper); color:#1c1a15; border-radius:3px;
+    border:1px solid var(--rule); padding:30px 30px 26px;
+    box-shadow: 0 1px 0 rgba(255,255,255,.03) inset;
+  }
+  .doc-label{
+    font-family:'Fraunces',serif; font-style:italic; font-size:.95rem;
+    color:#4a4536; margin:0 0 10px;
+  }
+  textarea{
+    width:100%; min-height:200px; background:#f6f2e8; color:#1c1a15;
+    border:1px solid var(--rule); border-radius:2px; padding:16px;
+    font-family:'JetBrains Mono',monospace; font-size:.86rem; line-height:1.6;
+    resize:vertical;
+  }
+  textarea:focus, button:focus-visible, a:focus-visible{
+    outline:2px solid var(--wax-bright); outline-offset:2px;
+  }
+  .doc-footer{
+    display:flex; align-items:center; gap:16px; margin-top:16px; flex-wrap:wrap;
+  }
+  button.act{
+    background:var(--wax); color:#fbf3e6; border:none; padding:13px 24px;
+    border-radius:3px; font-weight:600; font-size:.95rem; cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  button.act:disabled{opacity:.5; cursor:not-allowed;}
+  button.act:hover:not(:disabled){background:var(--wax-bright);}
+  .status-note{color:#5c5745; font-size:.85rem;}
+
+  #loading{display:none; color:var(--muted); font-size:.95rem; margin-top:26px; font-style:italic;}
+
+  /* --- Results: the redline --- */
+  #results{margin-top:10px;}
+  .clause{
+    padding:22px 0; border-top:1px solid #232a35;
+  }
+  .clause:first-child{border-top:none; padding-top:30px;}
+  .clause-index{
+    font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--muted);
+  }
+  .clause-title{
+    font-family:'Fraunces',serif; font-weight:600; font-size:1.15rem;
+    margin:4px 0 10px; color:#f4f1e8;
+  }
+  .clause-title.risk-red, .clause-title.risk-yellow{
+    text-decoration: line-through; text-decoration-color: var(--redline);
+    text-decoration-thickness: 1.5px; color:#cfc7b8;
+  }
+  .clause-title.risk-yellow{text-decoration-color: var(--caution);}
+  .clause-title.risk-green{color:var(--okink);}
+  .clause-note{
+    color:#c3bda9; font-size:.96rem; max-width:60ch; margin:0 0 12px;
+  }
+  .clause-fix{
+    font-family:'JetBrains Mono',monospace; font-size:.88rem; color:var(--okink);
+    background:rgba(47,107,82,.08); border-left:2px solid var(--okink);
+    padding:10px 14px; max-width:60ch;
+  }
+  .clause-fix .say{color:#8fd6b8; font-family:'Inter',sans-serif; font-size:.75rem; display:block; margin-bottom:4px;}
+
+  /* --- Paywall --- */
+  #paywall{display:none; margin-top:40px; padding-top:30px; border-top:1px solid #232a35;}
+  #paywall .doc-label{color:var(--muted); font-family:'Inter',sans-serif; font-style:normal; font-size:.85rem;}
+  #paywall h3{font-family:'Fraunces',serif; font-weight:600; font-size:1.4rem; margin:6px 0 8px; color:#f4f1e8;}
+  #paywall p{color:var(--muted); max-width:48ch;}
+  .existing-sub{color:var(--muted); font-size:.9rem; margin-top:16px;}
+  .existing-sub a{color:var(--wax-bright);}
+
+  footer{color:#5b6472; font-size:.85rem; margin-top:60px; max-width:56ch; font-style:italic;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="mark">DEALSAFE AI</p>
+  <h1>Know what you're signing before you sign it.</h1>
+  <p class="lede">Paste a contract below. We'll mark up what's risky and give you the plain-English line to send back — the same way you'd redline it yourself, if you had the time.</p>
+
+  <div class="doc">
+    <p class="doc-label">Paste the agreement</p>
+    <textarea id="contractText" placeholder="Paste the full contract or client agreement here..."></textarea>
+    <div class="doc-footer">
+      <button class="act" id="analyzeBtn" onclick="analyzeContract()">Analyze this contract</button>
+      <span class="status-note" id="freeCheckNote"></span>
+    </div>
+  </div>
+
+  <div id="loading">Reading through the fine print...</div>
+
+  <div id="results"></div>
+
+  <div id="paywall">
+    <p class="doc-label">You've used your free check</p>
+    <h3>Unlimited checks, whenever a contract lands in your inbox</h3>
+    <p>Subscribe for unlimited contract reviews and a downloadable copy of every report.</p>
+    <div id="paypal-button-container" style="max-width:320px; margin:18px 0 0;"></div>
+    <p class="existing-sub">Already subscribed? <a href="#" onclick="promptExistingSub();return false;">Enter your subscription ID</a></p>
+  </div>
+
+  <footer>DealSafe AI gives plain-English guidance, not legal advice. For binding decisions, consult a licensed attorney in your jurisdiction.</footer>
+</div>
+
+<script src="https://www.paypal.com/sdk/js?client-id=BAAbtPHAc58rEtA6fLFN4pU9-E8flcLseBOFuXa-NfCSFKlfGh8ItoA1p1ID14JtL2zlIDSxUVJB1xlTiA&vault=true&intent=subscription"></script>
+<script>
+  const FREE_CHECKS_ALLOWED = 1;
+  const PAYPAL_PLAN_ID = "P-7WE08056W03283633NKWJISA";
+
+  function getUsedChecks(){ return parseInt(localStorage.getItem('dealsafe_used_checks') || '0', 10); }
+  function incrementUsedChecks(){ localStorage.setItem('dealsafe_used_checks', getUsedChecks() + 1); }
+  function getSubscriptionId(){ return localStorage.getItem('dealsafe_subscription_id'); }
+  function setSubscriptionId(id){ localStorage.setItem('dealsafe_subscription_id', id); }
+
+  function updateFreeCheckNote(){
+    const used = getUsedChecks();
+    const remaining = Math.max(FREE_CHECKS_ALLOWED - used, 0);
+    document.getElementById('freeCheckNote').textContent =
+      getSubscriptionId() ? '' : (remaining > 0 ? `${remaining} free check remaining` : 'Free check used — subscribe below to continue');
+  }
+
+  async function hasActiveSubscription(){
+    const subId = getSubscriptionId();
+    if(!subId) return false;
+    try{
+      const res = await fetch('/api/verify-subscription', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ subscriptionId: subId })
+      });
+      const data = await res.json();
+      return !!data.active;
+    }catch(e){ return false; }
+  }
+
+  async function analyzeContract(){
+    const text = document.getElementById('contractText').value.trim();
+    if(!text){ alert('Paste your contract text first.'); return; }
+
+    const subscribed = await hasActiveSubscription();
+    if(!subscribed && getUsedChecks() >= FREE_CHECKS_ALLOWED){
+      document.getElementById('paywall').style.display = 'block';
+      document.getElementById('paywall').scrollIntoView({behavior:'smooth'});
+      return;
+    }
+
+    document.getElementById('analyzeBtn').disabled = true;
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('results').innerHTML = '';
+
+    try{
+      const res = await fetch('/api/analyze', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ contractText: text })
+      });
+      const data = await res.json();
+      renderResults(data.clauses || []);
+      if(!subscribed) incrementUsedChecks();
+      updateFreeCheckNote();
+    }catch(e){
+      document.getElementById('results').innerHTML = '<p class="clause-note">Something went wrong analyzing this contract. Please try again.</p>';
+    }finally{
+      document.getElementById('analyzeBtn').disabled = false;
+      document.getElementById('loading').style.display = 'none';
+    }
+  }
+
+  function renderResults(clauses){
+    const container = document.getElementById('results');
+    if(!clauses.length){
+      container.innerHTML = '<p class="clause-note">No clauses were flagged. Try pasting more of the contract text.</p>';
+      return;
+    }
+    container.innerHTML = clauses.map((c, i) => `
+      <div class="clause">
+        <span class="clause-index">Clause ${i + 1} of ${clauses.length}</span>
+        <h3 class="clause-title risk-${c.risk}">${escapeHtml(c.title)}</h3>
+        <p class="clause-note">${escapeHtml(c.explanation)}</p>
+        ${c.rewrite ? `<div class="clause-fix"><span class="say">Say this instead</span>${escapeHtml(c.rewrite)}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function promptExistingSub(){
+    const id = prompt('Enter your PayPal subscription ID (from your confirmation email):');
+    if(id){
+      setSubscriptionId(id.trim());
+      updateFreeCheckNote();
+      document.getElementById('paywall').style.display = 'none';
+      alert('Subscription linked. You can now run unlimited checks.');
+    }
+  }
+
+  window.addEventListener('load', () => {
+    updateFreeCheckNote();
+    if(window.paypal){
+      paypal.Buttons({
+        style: { shape:'rect', color:'gold', layout:'vertical', label:'subscribe' },
+        createSubscription: function(data, actions){
+          return actions.subscription.create({ plan_id: PAYPAL_PLAN_ID });
+        },
+        onApprove: function(data){
+          setSubscriptionId(data.subscriptionID);
+          document.getElementById('paywall').style.display = 'none';
+          updateFreeCheckNote();
+          alert('Subscription active! You now have unlimited contract checks.');
+        }
+      }).render('#paypal-button-container');
+    }
+  });
+</script>
+</body>
+</html>
